@@ -2,8 +2,8 @@ import requests
 import json
 
 # Specify the repository owner and name
-owner = "<owner>"
-repo = "<repo>"
+owner = "dheeraj204"
+repo = "test_env"
 
 # Define the API endpoint for the repository's pull requests
 api_endpoint = f"https://api.github.com/repos/{owner}/{repo}/pulls"
