@@ -2,8 +2,8 @@ import requests
 import json
 
 # Specify the repository owner and name
-owner = "<owner>"
-repo = "<repo>"
+owner = "jdxcode"
+repo = "rtx"
 
 # Define the API endpoint for the repository's pull requests
 api_endpoint = f"https://api.github.com/repos/{owner}/{repo}/pulls"
@@ -53,7 +53,6 @@ if response.status_code == 200:
                 for user in approved_reviewers:
                     print(f"- {user}")
 
-        print("-----")
+        print("----------------------------------------------------------------------------")
 else:
     print("Error: Failed to retrieve pull requests.")
-    
