@@ -50,9 +50,10 @@ if response.status_code == 200:
                     approved_reviewers.add(review['user']['login'])
             if len(approved_reviewers) > 0:
                 print("Approved Reviews:")
-                for user in approved_reviewers: 
+                for user in approved_reviewers:
                     print(f"- {user}")
 
         print("-----")
 else:
     print("Error: Failed to retrieve pull requests.")
+    
