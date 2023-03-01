@@ -10,7 +10,7 @@ today = datetime.today()
 day = today.strftime("%d_%b_%Y")
 
 # set up the path where file will be created
-folder = RepositoryData.data['path']
+folder = RepositoryData.data['path']+day
 
 # Set up authentication with personal access token
 token = os.environ[RepositoryData.data['git_token']]
@@ -31,7 +31,7 @@ for repo_name in repo_names:
     file_path = join(folder, name_of_file)
     if not os.path.isdir(folder):
         os.mkdir(folder)
-    with open(name_of_file, 'w') as repo_data:
+    with open(file_path, 'w') as repo_data:
 
         # Loop through each pull request and retrieve relevant information
         for pull_request in pull_requests:
