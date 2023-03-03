@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from github import Github
-from data import RepositoryData
+from git_data import RepositoryData
 
 # Set up authentication with personal access token
 token = os.environ['GITHUB_TOKEN']

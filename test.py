@@ -2,7 +2,6 @@ import os
 from os.path import join
 from datetime import datetime
 from github import Github
-from past.builtins import raw_input
 
 from git_data import RepositoryData
 
