@@ -3,7 +3,7 @@ class RepositoryData:
         'base_url': 'organization_base_url',
         'git_token': 'token',
         'org_name': 'my_organization',
-        'mail_domain': 'domain_mail',
+        'mail_domain': 'domain.com',
         'tests_repo': ['repo1,repo2,repo3'],
         'ui_repo': ['repo1,repo2,repo3'],
         'test_repo': ['repo1,repo2,repo3'],
