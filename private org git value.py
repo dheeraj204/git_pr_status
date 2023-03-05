@@ -61,6 +61,7 @@ def git_status(repo='tests_repo', logs_attached=False):
                 for rvw in reviews:
                     reviews_list.append(f'{rvw.user.login}: {rvw.state}\n')
                 data = [f"Pull Request #{pull_request.number} in {repo_name}:",
+                        f"Title of PR {pull_request.title}",
                         f"- Created by {pull_request.user.login} on "
                         f"{pull_request.created_at}",
                         f"- Requested changes by "
@@ -72,9 +73,11 @@ def git_status(repo='tests_repo', logs_attached=False):
                 comments = []
                 for comment in pull_request.get_issue_comments():
                     comments.append(f"- {comment.user.login} commented on "
-                                    f"{comment.created_at}: {comment.body}")
+                                    f"{comment.created_at}: {comment.body}\n")
                 data.extend(comments)
-                if logs_attached:
+
+                # checks for logs only in test/PR containing NSD in the title
+                if logs_attached and ('NSD' in pull_request.title):
                     # if logs are not attached mail will be triggered to user who raised PR
                     employee_mail_id = f'{pull_request.user.login}'.lower() + RepositoryData.data['mail_domain']
                     if not check_logs(extensions=extensions, comments=comments):
@@ -83,8 +86,7 @@ def git_status(repo='tests_repo', logs_attached=False):
                 data.extend(reviews_list)
 
                 # Calculate the number of days since the pull request was last updated
-                days_since_update = (datetime.utcnow() - pull_request.updated_at) \
-                    .days
+                days_since_update = (datetime.utcnow() - pull_request.updated_at).days
                 last_update = f"- Days since last update: {days_since_update}"
                 data.append(last_update)
                 for line in data:

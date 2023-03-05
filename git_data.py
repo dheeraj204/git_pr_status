@@ -1,7 +1,7 @@
 class RepositoryData:
     data = {
         'base_url': 'organization_base_url',
-        'git_token': 'token',
+        'git_token': 'org_git_token',
         'org_name': 'my_organization',
         'mail_domain': 'domain.com',
         'tests_repo': ['repo1,repo2,repo3'],
