@@ -1,10 +1,15 @@
 import os
 
 extension = ['.log', '.zip']
-comment = ['hdsfvgjh', 'hgfsdjhgv', 'fdgg.log']
+comment = ['hdsfvgjh', 'hgfsdjhgv', 'fdgg']
 
 
-def check_logs(extensions=extension, comments=comment):
+def check_logs(extensions=None, comments=None):
+    global comment
+    if comments is None:
+        comments = comment
+    if extensions is None:
+        extensions = extension
     for ext in extensions:
         res = [comment for comment in comments if ext in comment]
         if len(res) > 0:
