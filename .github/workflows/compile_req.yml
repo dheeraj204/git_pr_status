@@ -23,6 +23,30 @@ on:
         type: string
         default: "requirements.txt"
         description: "Path of req.txt file"
+      gh-token:
+        description: >-
+          GitHub token.
+        required: true
+      title:
+        description: >-
+          Title for the pull request.
+        required: false
+        default: ''
+      body:
+        description: >-
+          Body for the pull request.
+        required: false
+        default: ''
+      body-file:
+        description: >-
+          Read body text from file.
+        required: false
+        default: ''
+      auto-merge:
+        description: >-
+          Automatically merge only after necessary requirements are met.
+        required: false
+        default: 'yes'
 jobs:
 
   check_branch:
@@ -57,5 +81,19 @@ jobs:
           pip-compile --no-emit-index-url --no-emit-trusted-host --output-file=${{inputs.pip_compile_output_file}} \
           ${{inputs.pip_compile_input_file}}
 
-      - name: create PR
-        uses: .github/workflows/create_pr.yml
+#runs:
+#  using: composite
+#  steps:
+#    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
+#      shell: bash
+
+      - name: Create Pull Request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ inputs.gh-token }}
+          INPUT_TITLE: ${{ inputs.title }}
+          INPUT_BODY: ${{ inputs.body }}
+          INPUT_BODY_FILE: ${{ inputs.body-file }}
+          INPUT_AUTO_MERGE: ${{ inputs.auto-merge }}
+        run: |
+          create.sh
