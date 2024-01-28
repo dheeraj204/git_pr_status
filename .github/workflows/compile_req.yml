@@ -1,0 +1,58 @@
+name: pip-compile-upgrade
+
+on:
+  schedule:
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+    inputs:
+      complied_branch:
+        description: "The compiled barnch for PR"
+        default: "Update req"
+        required: true
+        type: string
+      pull_request_base_branch:
+        description: "Base branch for PR"
+        default: "main"
+        required: true
+        type: string
+      pip_compile_input_file:
+        type: string
+        default: "requirements.in"
+        description: "Path of req file"
+      pip_compile_output_file:
+        type: string
+        default: "requirements.txt"
+        description: "Path of req.txt file"
+jobs:
+
+  check_branch:
+    name: Check branch name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Abort if branch exists
+        run: |
+          if [[-n "$(git ls-remote --heads origin ${{inputs.complied_branch}})"]];then 
+          exit 1
+          fi
+  compile_reqs:
+    name: Compile requirements
+    runs-on: "windows-latest"
+    steps:
+      - name : Check outCode
+        uses: actions/checkout@v3
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          cache : 'pip'
+      - name: Install Pyhton Packages
+        run: |
+          pip install --upgrade pip==23.*
+          pip install pip-tools==7.*
+      - name: Compile requirements
+        shell: bash
+        run: |
+          pip-compile --no-emit-index-url --no-emit-trusted-host --output-file=${{inputs.pip_compile_output_file}} \
+          ${{inputs.pip_compile_input_file}}
