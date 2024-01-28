@@ -1,8 +1,31 @@
 name: pip-compile-upgrade
 
 on:
-  schedule:
-    - cron: '0 13 * * 1'
+  workflow_call:
+    gh-token:
+      description: >-
+        GitHub token.
+      required: true
+    title:
+      description: >-
+        Title for the pull request.
+      required: false
+      default: ''
+    body:
+      description: >-
+        Body for the pull request.
+      required: false
+      default: ''
+    body-file:
+      description: >-
+        Read body text from file.
+      required: false
+      default: ''
+    auto-merge:
+      description: >-
+        Automatically merge only after necessary requirements are met.
+      required: false
+      default: 'yes'
   workflow_dispatch:
     inputs:
       complied_branch:
@@ -23,30 +46,6 @@ on:
         type: string
         default: "requirements.txt"
         description: "Path of req.txt file"
-      gh-token:
-        description: >-
-          GitHub token.
-        required: true
-      title:
-        description: >-
-          Title for the pull request.
-        required: false
-        default: ''
-      body:
-        description: >-
-          Body for the pull request.
-        required: false
-        default: ''
-      body-file:
-        description: >-
-          Read body text from file.
-        required: false
-        default: ''
-      auto-merge:
-        description: >-
-          Automatically merge only after necessary requirements are met.
-        required: false
-        default: 'yes'
 jobs:
 
   check_branch:
