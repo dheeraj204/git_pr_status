@@ -56,3 +56,6 @@ jobs:
         run: |
           pip-compile --no-emit-index-url --no-emit-trusted-host --output-file=${{inputs.pip_compile_output_file}} \
           ${{inputs.pip_compile_input_file}}
+
+      - name: create PR
+        uses: .github/workflows/create_pr.yml
