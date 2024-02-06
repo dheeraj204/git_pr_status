@@ -36,8 +36,6 @@ on:
       override_req_file_paths:
         type: string
         default: ""
-      git_token:
-        type: string
 
 env:
   PYTHONUNBUFFERED: "1"
