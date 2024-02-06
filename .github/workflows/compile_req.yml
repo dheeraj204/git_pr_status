@@ -1,98 +1,276 @@
-name: pip-compile-upgrade
+# This is a reusable workflow
+# This workflow will compile the requirements for Windows
+
+name: Reusable Compile Requirements
 
 on:
   workflow_call:
-    gh-token:
-      description: >-
-        GitHub token.
-      required: true
-    title:
-      description: >-
-        Title for the pull request.
-      required: false
-      default: ''
-    body:
-      description: >-
-        Body for the pull request.
-      required: false
-      default: ''
-    body-file:
-      description: >-
-        Read body text from file.
-      required: false
-      default: ''
-    auto-merge:
-      description: >-
-        Automatically merge only after necessary requirements are met.
-      required: false
-      default: 'yes'
-  workflow_dispatch:
     inputs:
-      complied_branch:
-        description: "The compiled barnch for PR"
-        default: "Update req"
-        required: true
+      runners:  # https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job
         type: string
+        required: true
+        description: "Define operating system(s) on which requirements are compiled"
+      python_version:  # https://github.com/actions/setup-python
+        type: string
+        required: true
+        description: "Define single python version used to compile requirements"
+      compiled_reqs_branch:
+        type: string
+        required: true
+        description: "Specify the branch name containing recompiled requirements diff"
       pull_request_base_branch:
-        description: "Base branch for PR"
-        default: "main"
+        type: string
+      pip_compile_upgrade_packages:
+        type: string
         required: true
+        description: 'Comma separated list of packages to update. Enter "none" or "null" to disable this option. Enter "all" to upgrade all.'
+      pip_compile_input_files:
         type: string
-      pip_compile_input_file:
+        default: 'requirements.in'
+        description: 'Space separated input file(s) passed directly to pip-compile command'
+      # Override default requirement output file paths. Inputs are comma delimited "key: value"
+      # Accepted keys [win, mac, ubuntu]; will return non-zero exit code for unsupported key
+      # Example inputs:
+      #  1. "win: requirements.txt"
+      #  2. "win: requirements.txt, ubuntu: requirements/ubuntu.txt, mac: requirements/mac.txt"
+      override_req_file_paths:
         type: string
-        default: "requirements.in"
-        description: "Path of req file"
-      pip_compile_output_file:
+        default: ""
+      git_token:
         type: string
-        default: "requirements.txt"
-        description: "Path of req.txt file"
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_INDEX_URL: ${{ secrets.PIP_INDEX_URL }}
+
+  # Requirements file path
+  REQS_FILE_WIN: requirements/win-app.txt
+
+  # Git data
+  USER_EMAIL: "dgannama@ford.com"
+  USER_NAME: "dgannama_ford"
+
+
 jobs:
+    process_inputs:
+      name: Process Workflow Inputs
+      runs-on: ubuntu-latest
+      outputs:
+        os_matrix: ${{steps.process_os_matrix.outputs.os_matrix}}
+        pip_compile_upgrade_packages: ${{steps.process_upgrade_packages.outputs.pip_compile_upgrade_packages}}
+        # Using github outputs because environment variable changes only apply within the same job
+        # Env vars changes do not carry to other jobs
+        reqs_file_win: ${{steps.req_file_paths.outputs.reqs_file_win}}
+      steps:
+        - name: Set OS Matrix
+          id: process_os_matrix
+          run: |
+            os_matrix_value=$(echo ${{ inputs.runners }} | tr ',' '\n' | sed -e 's/\(.*\)/"&"/' | paste -s -d ',' | sed -e 's/\(.*\)/[\1]/')
+            echo "os_matrix=$os_matrix_value" >> $GITHUB_OUTPUT
+        - name: Process pip-compile upgrade packages
+          id: process_upgrade_packages
+          shell: bash
+          # convert user input to args for pip-compile:  a,b,...,n -> -P a -P b -P ... -P n
+          run: |
+            user_input="${{ inputs.pip_compile_upgrade_packages }}"
+            lowercase_user_input=$(awk '{print tolower($0)}' <<< "$user_input")
+            if [[ $lowercase_user_input == "none" || $lowercase_user_input == "null" || -z $lowercase_user_input ]]; then
+                output=""
+            else
+                if [[ $lowercase_user_input == "all" ]]; then
+                    output="--upgrade"
+                else
+                    output=$(echo $user_input | sed 's/, */ -P /g' | sed 's/^/-P /')
+                fi
+            fi
+            echo "pip_compile_upgrade_packages=$output" >> $GITHUB_OUTPUT
+        - name: Parse overriding requirement output file paths
+          id: req_file_paths
+          shell: bash
+          run: |
+            req_files="${{ inputs.override_req_file_paths }}"
+            if [[ -z $req_files ]]; then
+              echo "No overriding requirement file paths passed, assume default env var values"
+              exit 0
+            fi
 
-  check_branch:
-    name: Check branch name
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Abort if branch exists
-        run: |
-          if [[-n "$(git ls-remote --heads origin ${{inputs.complied_branch}})"]];then 
-          exit 1
-          fi
-  compile_reqs:
-    name: Compile requirements
-    runs-on: "windows-latest"
-    steps:
-      - name : Check outCode
-        uses: actions/checkout@v3
-      - name: Set up python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-          cache : 'pip'
-      - name: Install Pyhton Packages
-        run: |
-          pip install --upgrade pip==23.*
-          pip install pip-tools==7.*
-      - name: Compile requirements
-        shell: bash
-        run: |
-          pip-compile --no-emit-index-url --no-emit-trusted-host --output-file=${{inputs.pip_compile_output_file}} \
-          ${{inputs.pip_compile_input_file}}
+            # Replace commas with newlines for easier parsing
+            req_files="${req_files//, /$'\n'}"
+            echo "$req_files"
 
-#runs:
-#  using: composite
-#  steps:
-#    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
-#      shell: bash
+            reqs_file_win="$REQS_FILE_WIN"
 
-      - name: Create Pull Request
-        shell: bash
-        env:
-          GH_TOKEN: ${{ inputs.gh-token }}
-          INPUT_TITLE: ${{ inputs.title }}
-          INPUT_BODY: ${{ inputs.body }}
-          INPUT_BODY_FILE: ${{ inputs.body-file }}
-          INPUT_AUTO_MERGE: ${{ inputs.auto-merge }}
-        run: |
-          create.sh
+            while IFS=':' read -r platform file_path; do
+                # Remove any leading/trailing spaces in platform and file path
+                platform=${platform// /}
+                file_path=${file_path// /}
+                echo "Loop case -> $platform: $file_path"
+
+                # Set environment variables based on platform
+                case $platform in
+                    win)
+                        reqs_file_win=$file_path
+                        ;;
+                    *)
+                        echo "Unknown platform: $platform"
+                        exit 1
+                        ;;
+                esac
+            done <<< "$req_files"
+            echo "reqs_file_win=$reqs_file_win" >> $GITHUB_OUTPUT
+
+    check_branch:
+      name: Check Branch Name
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+        - name: Abort if Branch Exists
+          run: |
+            if [[ -n "$(git ls-remote --heads origin ${{ inputs.compiled_reqs_branch }})" ]]; then
+              exit 1
+            fi
+
+    compile_reqs:
+      name: Compile Requirements
+      needs: [process_inputs,check_branch]
+      strategy:
+        matrix:
+          os: ${{fromJson(needs.process_inputs.outputs.os_matrix)}}
+      runs-on: ${{ matrix.os }}
+      steps:
+        - name: Check Out Code
+          uses: actions/checkout@v3
+
+        - name: Set up Python
+          uses: actions/setup-python@v4
+          with:
+            python-version: ${{ inputs.python_version }}
+            cache: 'pip'
+
+        - name: Install Python packages
+          run: |
+            pip install --upgrade pip==23.*
+            pip install pip-tools==7.*
+
+        # Configure environment variables per operating system
+        - name: Configure Env Vars (Windows)
+          if: matrix.os == 'windows-latest'
+          shell: bash
+          run: |
+            echo "COMPILE_OUT=${{ needs.process_inputs.outputs.reqs_file_win }}" >> $GITHUB_ENV
+
+        - name: Compile Requirements
+          shell: bash
+          run: |
+            pip-compile -v --no-emit-index-url --no-emit-trusted-host \
+            --output-file=$COMPILE_OUT \
+            ${{ needs.process_inputs.outputs.pip_compile_upgrade_packages }} \
+            ${{ inputs.pip_compile_input_files }}
+
+        # Save artifacts so they are available in downstream jobs
+        - uses: actions/upload-artifact@v3
+          if: matrix.os == 'windows-latest'
+          with:
+            name: compiled-requirements-windows
+            path: ${{env.COMPILE_OUT}}
+            if-no-files-found: 'error'
+
+    commit_and_create_pr:
+      name: Commit Change and Create PR
+      needs: [process_inputs,compile_reqs]
+      permissions: write-all
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check Out Code
+          uses: actions/checkout@v3
+
+          # Download requirement artifact files stored from the compile_reqs job
+        - uses: actions/download-artifact@v3
+          if: contains(inputs.runners, 'windows-latest')
+          with:
+            name: compiled-requirements-windows
+
+        - name: Move temp requirement file(s) to final destination
+          shell: bash
+          run: |
+            move_file_if_exists() {
+              destination_path="$1"
+              # Artifacts downloaded to default workspace path from actions/download-artifact
+              source_path="$(basename $destination_path)"
+              if [ $source_path = $destination_path ]; then
+                echo "src and dest are the same, skipping ..."
+                return
+              fi
+
+              if [ -e "$source_path" ]; then
+                  mv $source_path $destination_path
+                  echo "Moved $source_path to $destination_path"
+              else
+                  echo "Source path $source_path does not exist."
+              fi
+            }
+            move_file_if_exists "${{ needs.process_inputs.outputs.reqs_file_win }}"
+
+        - name: Commit changes
+          shell: bash
+          run: |
+            git remote update
+            git fetch
+            git branch -vv
+
+            git checkout -B ${{ inputs.compiled_reqs_branch }}
+            git config user.email $USER_EMAIL
+            git config user.name $USER_NAME
+            git config --global core.autocrlf input
+
+            git add -A
+
+            git commit -m "REQ-1: re-compile requirements from workflow"
+            # to skip CI checks while testing comment line above and uncomment line below
+            #git commit -m "REQ-1: re-compile requirements from workflow [skip ci]"
+
+            git push origin -u ${{ inputs.compiled_reqs_branch }}
+
+#         Keep this here just in case it's needed in the future
+#         Was used when compiled reqs branch could be non-unique
+#        - name: Checking PR
+#          id: check_pr
+#          env:
+#            GH_TOKEN: ${{ secrets.GH_PAT }}
+#          run: |
+#            if ${{inputs.enable_create_pr}} == true; then
+#              PR_EXIST=$(gh pr list --base "${{ inputs.pull_request_base_branch }}" --head "${{ inputs.compiled_reqs_branch }}" --json number | jq -r '.[0].number // empty')
+#              echo "pr_exist=$PR_EXIST" >> $GITHUB_OUTPUT
+#            else
+#              echo "pr_exist=''" >> $GITHUB_OUTPUT
+#            fi
+
+        - name: Create pull request
+          env:
+            GH_TOKEN: ${{ secrets.TOKEN }}
+          shell: bash
+          run: |
+            # uncomment next line to debug env before raising PR
+            #env
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              /repos/${{ github.repository }}/pulls \
+              -f title='REQ-1 Re-compile Requirements' \
+              -f body='This PR was generated from a GitHub workflow
+
+            Workflow link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Compiled from base branch: `${{ github.ref_name }}`
+            pip-compile upgrade packages option: `${{ needs.process_inputs.outputs.pip_compile_upgrade_packages }}`
+
+            ---
+
+            Workflow ref: `${{ github.workflow_ref }}`
+            Run ID: ${{ github.run_id }}
+            GitHub runner(s): `${{ inputs.runners }}`
+            Triggered by: @${{ github.triggering_actor }}' \
+              -f head='${{ inputs.compiled_reqs_branch }}' \
+              -f base='${{ inputs.pull_request_base_branch }}' \
+              -f draft=true

@@ -1,0 +1,41 @@
+# This workflow will compile the requirements for Windows, macOS and Ubuntu
+# This workflow will be triggered by manual
+# This workflow will call pr_creator and compile_reqs workflows
+
+name: Compile Requirements
+
+on:
+  workflow_dispatch:
+    inputs:
+      compiled_reqs_branch:
+        description: 'The Compiled Branch for Pull Request'
+        default: 'REQ-1_workflow-recompile-reqs'
+        required: true
+        type: string
+      pull_request_base_branch:
+        description: 'Base Branch for Pull Request'
+        default: 'main'
+        required: true
+        type: string
+      pip_compile_upgrade_packages:
+        description: 'Comma separated list of packages to update. Enter "none" or "null" to disable this option. Enter "all" to upgrade all.'
+        default: "none"
+        type: string
+      git_token:
+        required: true
+        description: "asklfjlkdf"
+        type: string
+
+jobs:
+  call_reqs_compiler:
+    name: Call Requirements Compiler
+    uses: ./.github/workflows/compile_reqs.yml
+    secrets: inherit
+    with:
+      runners: 'windows-latest'
+      python_version: '3.9'
+      compiled_reqs_branch: ${{ inputs.compiled_reqs_branch }}
+      pull_request_base_branch: ${{ inputs.pull_request_base_branch }}
+      pip_compile_upgrade_packages: ${{ inputs.pip_compile_upgrade_packages }}
+      pip_compile_input_files: 'requirements.in'
+      override_req_file_paths: "win: requirements.txt"
