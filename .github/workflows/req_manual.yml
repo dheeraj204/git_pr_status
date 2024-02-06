@@ -21,10 +21,6 @@ on:
         description: 'Comma separated list of packages to update. Enter "none" or "null" to disable this option. Enter "all" to upgrade all.'
         default: "none"
         type: string
-      git_token:
-        required: true
-        description: "asklfjlkdf"
-        type: string
 
 jobs:
   call_reqs_compiler:
